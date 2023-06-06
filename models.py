@@ -3,6 +3,11 @@ from database import Base
 from pydantic import BaseModel
 
 
+# requests models
+class QuestionRequest(BaseModel):
+    questions_num: int
+
+
 # postgres table
 class QuestionsTable(Base):
     __tablename__ = "questions"
@@ -11,8 +16,3 @@ class QuestionsTable(Base):
     question_text = Column(Text)
     answer_text = Column(Text)
     created_at = Column(DateTime)
-
-
-# requests models
-class QuestionRequest(BaseModel):
-    questions_num: int
