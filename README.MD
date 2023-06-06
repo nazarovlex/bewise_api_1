@@ -18,6 +18,6 @@ To remove saved data and remove unused docker data:
 To restart project (build, start):
 - make restart
 
-For more info about API run app and open link "http://localhost:8000/docs".
+For more info about API run app and open link "http://localhost:8000/docs" or "http://localhost:8000/redoc".
 
 
