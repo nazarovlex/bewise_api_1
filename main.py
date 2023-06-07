@@ -52,6 +52,8 @@ def insert_question(db_question: dict, session: SessionLocal()) -> SessionLocal(
 
 @app.post("/questions")
 async def questions(req_question: QuestionRequest) -> dict:
+    if req_question.questions_num > 100 or req_question.questions_num < 1:
+        return {"error": "question num must be in range 1-100"}
     session = SessionLocal()
 
     # get last question data
