@@ -15,7 +15,6 @@ services:
     networks:
       - web
 
-
   web:
     build:
       context: .
@@ -27,8 +26,6 @@ services:
       - web
     depends_on:
       - postgres
-
-
 
 networks:
   web:
