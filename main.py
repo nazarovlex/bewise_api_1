@@ -6,12 +6,18 @@ import requests
 import uvicorn
 from sqlalchemy.dialects.postgresql import insert
 
+
+class ResponseError(Exception):
+    pass
+
+
 # FastAPI init
 app = FastAPI()
 
 
 # create all tables in DB
 async def create_tables():
+    # create table if not exist
     Base.metadata.create_all(bind=engine)
 
 
@@ -33,19 +39,19 @@ def get_questions(count: int) -> dict:
     url = "https://jservice.io/api/random?count="
     response = requests.get(url=url + str(count))
     if response.status_code != 200:
-        return {"error": f"jservice response error, status code: {response.status_code}"}
+        raise ResponseError(f"jservice response error, status code: {response.status_code}")
     return response.json()
 
 
-# checking for questions conflict
-def check_existed_question(db_question: dict, session: SessionLocal()) -> SessionLocal():
+# try to insert question to DB
+def insert_question(db_question: dict, session: SessionLocal()) -> SessionLocal():
     query = insert(QuestionsTable).values(**db_question).on_conflict_do_nothing(
         index_elements=[QuestionsTable.question_id])
     return session.execute(query)
 
 
 @app.post("/questions")
-async def questions(req_question: QuestionRequest):
+async def questions(req_question: QuestionRequest) -> dict:
     session = SessionLocal()
 
     # get last question data
@@ -63,7 +69,10 @@ async def questions(req_question: QuestionRequest):
         last_record = {}
 
     # get questions json data from a third-party API
-    new_questions = get_questions(req_question.questions_num)
+    try:
+        new_questions = get_questions(req_question.questions_num)
+    except ResponseError as error:
+        return {"error": str(error)}
 
     for raw in new_questions:
         db_question = {
@@ -74,18 +83,22 @@ async def questions(req_question: QuestionRequest):
         }
 
         # checking DB for duplicate
-        result = check_existed_question(db_question, session)
+        result = insert_question(db_question, session)
 
         # while question is already existed, get new question
         while result.rowcount == 0:
-            raw = get_questions(1)[0]
+            try:
+                raw = get_questions(1)[0]
+            except ResponseError as error:
+                return {"error": str(error)}
+
             db_question = {
                 "question_id": raw["id"],
                 "question_text": raw["question"],
                 "answer_text": raw["answer"],
                 "created_at": raw["created_at"]
             }
-            result = check_existed_question(db_question, session)
+            result = insert_question(db_question, session)
 
         session.commit()
 
