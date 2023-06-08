@@ -5,6 +5,7 @@ from database import database, engine, Base, SessionLocal
 import requests
 import uvicorn
 from sqlalchemy.dialects.postgresql import insert
+from fastapi import Response
 
 
 class ResponseError(Exception):
@@ -15,20 +16,20 @@ class ResponseError(Exception):
 app = FastAPI()
 
 
-# create all tables in DB
+# create tables in DB
 async def create_tables():
     # create table if not exist
     Base.metadata.create_all(bind=engine)
 
 
-# connect to DB when app is start running
+# create DB connection
 @app.on_event("startup")
 async def startup():
     await database.connect()
     await create_tables()
 
 
-# disconnect to DB when app is stopping
+# close DB connection
 @app.on_event("shutdown")
 async def shutdown():
     await database.disconnect()
@@ -50,9 +51,10 @@ def insert_question(db_question: dict, session: SessionLocal()) -> SessionLocal(
     return session.execute(query)
 
 
-@app.post("/questions")
-async def questions(req_question: QuestionRequest) -> dict:
+@app.post("/questions", status_code=200)
+async def questions(response: Response, req_question: QuestionRequest) -> dict:
     if req_question.questions_num > 100 or req_question.questions_num < 1:
+        response.status_code = 400
         return {"error": "question num must be in range 1-100"}
     session = SessionLocal()
 
@@ -74,6 +76,7 @@ async def questions(req_question: QuestionRequest) -> dict:
     try:
         new_questions = get_questions(req_question.questions_num)
     except ResponseError as error:
+        response.status_code = 500
         return {"error": str(error)}
 
     for raw in new_questions:
@@ -92,6 +95,7 @@ async def questions(req_question: QuestionRequest) -> dict:
             try:
                 raw = get_questions(1)[0]
             except ResponseError as error:
+                response.status_code = 500
                 return {"error": str(error)}
 
             db_question = {
