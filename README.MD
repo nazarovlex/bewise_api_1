@@ -19,6 +19,8 @@ To remove database artifacts and unused docker data, execute command:
 To restart project (build, start) execute command:
 - make restart
 
+API request examples in folder "API_request_examples".
+
 For more info about API run app and open link "http://localhost:8000/docs" or "http://localhost:8000/redoc".
 
 
